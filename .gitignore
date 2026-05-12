@@ -4,3 +4,6 @@ dist/
 *.pid
 uploads/
 .DS_Store
+
+# Not ignore
+!CLAUDE.md
