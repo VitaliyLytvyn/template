@@ -113,6 +113,34 @@ Base path: `/api/v1`
 | Auth | Add middleware before routers |
 | OTEL | Replace `requestId` middleware with OTEL context propagation |
 
+## Logging
+
+Backend uses [Pino](https://getpino.io/) — structured JSON logger (`backend/nodejs/src/logger.ts`).
+
+**Dev vs Prod**
+
+- **Dev**: `pino-pretty` transport spawns a worker thread that receives raw JSON and outputs colored, aligned text. Main thread never blocks — formatting is off the event loop.
+- **Prod**: no transport — Pino writes raw JSON directly to `stdout`. Faster (no worker, no formatting). stdout is captured by Docker / systemd and shipped to a log aggregator (Loki, Datadog, CloudWatch, etc.) which parses the JSON fields for search and alerting.
+
+Every log line includes `service` and `env` base fields. Each HTTP request gets a `requestId` (UUID), attached to `res.locals`, the `X-Request-Id` response header, and the request-completed log entry (`method`, `url`, `statusCode`, `responseTimeMs`).
+
+**Native dev (`npm run dev`)**
+- stdout → your terminal, formatted by `pino-pretty`
+- Nothing persisted
+
+**Docker mode**
+- stdout → Docker log driver (default: `json-file` at `/var/lib/docker/containers/<id>/<id>-json.log`)
+- Viewable via `docker logs <container>` or `./manage.sh logs backend`
+- Auto-rotated by Docker, not by the app
+
+To get persistent log files, you'd need one of:
+1. Shell redirect: `npm run dev 2>&1 | tee app.log`
+2. Pino transport to `pino/file`: `{ target: 'pino/file', options: { destination: './app.log' } }`
+3. Docker log driver → file/aggregator
+4. Real aggregator (Loki, Datadog) scraping Docker stdout
+
+Current setup assumes logs are ephemeral or handled by infra — typical for containerized apps.
+
 ## Notes
 
 - Docker build uses `network: host` — required for WSL2 DNS during `npm ci`

@@ -157,14 +157,30 @@ cmd_status() {
 cmd_logs() {
   local target="$1"
   case "$target" in
-    backend)  tail -f "$LOGS_DIR/backend.log" ;;
-    frontend) tail -f "$LOGS_DIR/frontend.log" ;;
+    backend)
+      if [[ -f "$LOGS_DIR/backend.log" ]]; then
+        tail -f "$LOGS_DIR/backend.log"
+      else
+        docker compose -f "$REPO_ROOT/docker-compose.yml" logs -f backend
+      fi
+      ;;
+    frontend)
+      if [[ -f "$LOGS_DIR/frontend.log" ]]; then
+        tail -f "$LOGS_DIR/frontend.log"
+      else
+        docker compose -f "$REPO_ROOT/docker-compose.yml" logs -f frontend
+      fi
+      ;;
     db)
       docker compose -f "$REPO_ROOT/docker-compose.yml" logs -f db 2>/dev/null || \
       docker compose -f "$REPO_ROOT/docker-compose.db-dev.yml" logs -f db
       ;;
     all)
-      tail -f "$LOGS_DIR/backend.log" "$LOGS_DIR/frontend.log" 2>/dev/null || true
+      if [[ -f "$LOGS_DIR/backend.log" ]] || [[ -f "$LOGS_DIR/frontend.log" ]]; then
+        tail -f "$LOGS_DIR/backend.log" "$LOGS_DIR/frontend.log" 2>/dev/null || true
+      else
+        docker compose -f "$REPO_ROOT/docker-compose.yml" logs -f backend frontend
+      fi
       ;;
   esac
 }
