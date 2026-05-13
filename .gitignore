@@ -3,6 +3,8 @@ dist/
 .env
 *.pid
 uploads/
+!uploads/.gitkeep
+logs/*.log
 .DS_Store
 
 # Not ignore
