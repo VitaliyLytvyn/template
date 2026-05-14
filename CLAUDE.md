@@ -1,12 +1,12 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code (claude.ai/code) in this repo.
 
 ## What this is
 
-Study project: production-grade full-stack template. `prd.md` (in `.MY-FILES/`) defines the target architecture. The codebase is currently mid-migration — backend is fully on the target stack (TypeScript, Drizzle, Pino, Zod, Express 5), frontend is fully on the target stack (React 19, TanStack Router v1, TanStack Query v5, Tailwind v4).
+Study project: production-grade full-stack template. `prd.md` (in `.MY-FILES/`) defines target architecture. Codebase mid-migration — backend fully on target stack (TypeScript, Drizzle, Pino, Zod, Express 5), frontend fully on target stack (React 19, TanStack Router v1, TanStack Query v5, Tailwind v4).
 
-When implementing features, follow target patterns: TypeScript, ESM, Drizzle, Pino, Zod, TanStack Router/Query, Tailwind v4.
+Follow target patterns: TypeScript, ESM, Drizzle, Pino, Zod, TanStack Router/Query, Tailwind v4.
 
 ## Commands
 
@@ -89,7 +89,7 @@ api/                   — typed fetch wrappers per resource (no raw fetch in co
 ```
 
 Route file naming: `$id.tsx` → `/products/123`, `$id.edit.tsx` → `/products/123/edit`.
-Route tree is auto-generated into `routeTree.gen.ts` — do not edit manually.
+Route tree auto-generated into `routeTree.gen.ts` — do not edit manually.
 
 ### Database (`db/mysql/`)
 - MySQL 8.4 (Docker only)
@@ -122,5 +122,5 @@ Base path: `/api/v1`. All responses JSON.
 ## Docker notes
 
 - `docker-compose.yml` build stanzas use `network: host` — required for WSL2 where Docker bridge DNS fails during `npm ci`.
-- `MIGRATIONS_DIR=/app/migrations` is set in docker-compose; migrations are volume-mounted (`db/mysql/migrations:/app/migrations:ro`). Do not rely on relative `__dirname` paths from `dist/` inside containers.
-- `VITE_API_BASE_URL` defaults to `/api/v1` in `src/api/products.ts` when env var is unset — correct for Docker (nginx proxies `/api/` to backend). For native dev, set it to `http://localhost:3000/api/v1`.
+- `MIGRATIONS_DIR=/app/migrations` set in docker-compose; migrations volume-mounted (`db/mysql/migrations:/app/migrations:ro`). Don't rely on relative `__dirname` paths from `dist/` inside containers.
+- `VITE_API_BASE_URL` defaults to `/api/v1` in `src/api/products.ts` when env var unset — correct for Docker (nginx proxies `/api/` to backend). For native dev, set to `http://localhost:3000/api/v1`.
