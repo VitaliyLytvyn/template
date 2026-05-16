@@ -1,0 +1,116 @@
+{
+  "uid": "backend-overview",
+  "title": "Backend Overview",
+  "tags": ["backend", "nodejs"],
+  "schemaVersion": 39,
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request Rate (req/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "sum(rate(http_requests_total[1m])) by (route)",
+          "legendFormat": "{{route}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Error Rate (%)",
+      "type": "timeseries",
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "100 * sum(rate(http_requests_total{status_code=~\"5..\"}[1m])) / sum(rate(http_requests_total[1m]))",
+          "legendFormat": "error %"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Latency P50/P95/P99",
+      "type": "timeseries",
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Node.js Heap Used",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "nodejs_heap_size_used_bytes",
+          "legendFormat": "heap used"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Event Loop Lag",
+      "type": "timeseries",
+      "gridPos": { "x": 8, "y": 8, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "nodejs_eventloop_lag_seconds",
+          "legendFormat": "lag"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "DB Pool Connections",
+      "type": "timeseries",
+      "gridPos": { "x": 16, "y": 8, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "db_pool_connections_active",
+          "legendFormat": "active"
+        },
+        {
+          "datasource": { "uid": "prometheus" },
+          "expr": "db_pool_connections_idle",
+          "legendFormat": "idle"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Logs",
+      "type": "logs",
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "uid": "loki" },
+          "expr": "{service=\"backend\"}",
+          "legendFormat": ""
+        }
+      ]
+    }
+  ]
+}

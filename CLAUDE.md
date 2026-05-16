@@ -18,6 +18,7 @@ npm start            # node dist/index.js
 npm run db:generate  # drizzle-kit generate → db/mysql/migrations/
 npm run db:migrate   # drizzle-kit migrate (runs pending migrations)
 npm run db:seed      # run db/mysql/seed/seed.sql
+npx tsc --noEmit     # type-check without emit
 ```
 
 ### Frontend (`front/react/`)
@@ -25,6 +26,14 @@ npm run db:seed      # run db/mysql/seed/seed.sql
 npm run dev      # Vite, port 5173
 npm run build    # tsc + vite build
 npm run preview
+npx tsc --noEmit # type-check without emit
+```
+
+### Environment setup (native dev)
+Copy `.env.example` to `backend/nodejs/.env` and set at minimum:
+```
+DATABASE_URL=mysql://root:password@localhost:3306/template
+VITE_API_BASE_URL=http://localhost:3000/api/v1   # frontend .env
 ```
 
 ### Full stack via `manage.sh`
@@ -108,10 +117,14 @@ Base path: `/api/v1`. All responses JSON.
 | Concern | How |
 |---|---|
 | S3 storage | Implement `S3Storage` vs `StorageProvider` interface, swap in `config.ts` |
-| Kafka | Implement `KafkaEventBus` vs `DomainEventBus`, inject in `index.ts` |
+| Kafka | Implement `KafkaEventBus` vs `DomainEventBus`, inject in `app.ts` / `index.ts` |
 | OTEL tracing | Replace `requestId` with OTEL context in request logger middleware |
 | New resource | Add `{resource}/` dir with schema/service/controller/router; mount router in `app.ts` |
 | Auth | Middleware layer before routers |
+
+## Requirements
+
+- All backend implementations must expose `GET /health` → `{ status, uptime, db }`.
 
 ## Code style
 
@@ -123,4 +136,4 @@ Base path: `/api/v1`. All responses JSON.
 
 - `docker-compose.yml` build stanzas use `network: host` — required for WSL2 where Docker bridge DNS fails during `npm ci`.
 - `MIGRATIONS_DIR=/app/migrations` set in docker-compose; migrations volume-mounted (`db/mysql/migrations:/app/migrations:ro`). Don't rely on relative `__dirname` paths from `dist/` inside containers.
-- `VITE_API_BASE_URL` defaults to `/api/v1` in `src/api/products.ts` when env var unset — correct for Docker (nginx proxies `/api/` to backend). For native dev, set to `http://localhost:3000/api/v1`.
+- `VITE_API_BASE_URL` defaults to `/api/v1` when env var unset — correct for Docker (nginx proxies `/api/` to backend). For native dev, set to `http://localhost:3000/api/v1` in `front/react/.env`.

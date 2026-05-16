@@ -7,6 +7,10 @@ LOGS_DIR="$REPO_ROOT/logs"
 BACKEND_PID="$PIDS_DIR/backend.pid"
 FRONTEND_PID="$PIDS_DIR/frontend.pid"
 
+DC="$REPO_ROOT/docker-compose.yml"
+DC_OBS="$REPO_ROOT/docker-compose.observability.yml"
+DC_DEV="$REPO_ROOT/docker-compose.db-dev.yml"
+
 # ── colors ────────────────────────────────────────────────────────────────────
 C_RESET='\033[0m'
 C_BOLD='\033[1m'
@@ -38,10 +42,7 @@ check_prereqs() {
 
 # ── DB healthcheck wait ───────────────────────────────────────────────────────
 wait_db() {
-  local mode="$1"
-  local compose_file
-  [[ "$mode" == "docker" ]] && compose_file="$REPO_ROOT/docker-compose.yml" \
-                             || compose_file="$REPO_ROOT/docker-compose.db-dev.yml"
+  local compose_file="$1"
   info "Waiting for DB to be healthy..."
   local tries=0
   while [[ $tries -lt 30 ]]; do
@@ -56,81 +57,39 @@ wait_db() {
   exit 1
 }
 
-# ── commands ──────────────────────────────────────────────────────────────────
+# ── docker ────────────────────────────────────────────────────────────────────
 cmd_start() {
-  local mode="$1"
   check_prereqs
-  mkdir -p "$PIDS_DIR"
+  info "Building images and starting all containers..."
+  docker compose -f "$DC" up -d --build
+  wait_db "$DC"
 
-  if [[ "$mode" == "native" ]]; then
-    mkdir -p "$LOGS_DIR"
-    info "Starting DB only in Docker..."
-    docker compose -f "$REPO_ROOT/docker-compose.db-dev.yml" up -d
-    wait_db native
+  info "Running migrations..."
+  docker compose -f "$DC" exec backend node dist/migrate.js
 
-    info "Running migrations..."
-    (cd "$REPO_ROOT/backend/nodejs" && npm run db:migrate)
+  info "Seeding..."
+  docker compose -f "$DC" exec -T db \
+    mysql -utemplate_user -ptemplate_pass template_db \
+    < "$REPO_ROOT/db/mysql/seed/seed.sql" 2>/dev/null || true
 
-    info "Seeding..."
-    mysql -utemplate_user -ptemplate_pass -h 127.0.0.1 template_db \
-      < "$REPO_ROOT/db/mysql/seed/seed.sql" 2>/dev/null || true
-
-    info "Starting backend (logs → logs/backend.log)..."
-    (cd "$REPO_ROOT/backend/nodejs" && npm run dev > "$LOGS_DIR/backend.log" 2>&1 &)
-    echo $! > "$BACKEND_PID"
-
-    info "Starting frontend (logs → logs/frontend.log)..."
-    (cd "$REPO_ROOT/front/react" && npm run dev > "$LOGS_DIR/frontend.log" 2>&1 &)
-    echo $! > "$FRONTEND_PID"
-
-    success "Native started — Backend: http://localhost:3000  Frontend: http://localhost:5173"
-
-  else
-    info "Building images and starting all containers..."
-    docker compose -f "$REPO_ROOT/docker-compose.yml" up -d --build
-    wait_db docker
-
-    info "Running migrations..."
-    docker compose -f "$REPO_ROOT/docker-compose.yml" exec backend node dist/migrate.js
-
-    info "Seeding..."
-    docker compose -f "$REPO_ROOT/docker-compose.yml" exec -T db \
-      mysql -utemplate_user -ptemplate_pass template_db \
-      < "$REPO_ROOT/db/mysql/seed/seed.sql" 2>/dev/null || true
-
-    success "Docker started — Frontend: http://localhost  Backend: http://localhost:3000"
-  fi
+  success "Docker started — Frontend: http://localhost  Backend: http://localhost:3000"
 }
 
 cmd_stop() {
-  local mode="$1"
   check_prereqs
-
-  if [[ "$mode" == "native" ]]; then
-    for pid_file in "$BACKEND_PID" "$FRONTEND_PID"; do
-      if [[ -f "$pid_file" ]]; then
-        local pid
-        pid=$(cat "$pid_file")
-        kill "$pid" 2>/dev/null || true
-        rm -f "$pid_file"
-      fi
-    done
-    docker compose -f "$REPO_ROOT/docker-compose.db-dev.yml" down
-    success "Native stopped"
-  else
-    docker compose -f "$REPO_ROOT/docker-compose.yml" down
-    success "Docker stopped"
-  fi
+  docker compose -f "$DC" down
+  success "Docker stopped"
 }
 
 cmd_status() {
   echo -e "\n${C_BOLD}Docker containers:${C_RESET}"
-  local full_ps db_ps
-  full_ps=$(docker compose -f "$REPO_ROOT/docker-compose.yml" ps 2>/dev/null || true)
-  db_ps=$(docker compose -f "$REPO_ROOT/docker-compose.db-dev.yml" ps 2>/dev/null || true)
-  if echo "$full_ps" | grep -q "Up"; then
+  local full_ps obs_ps db_ps
+  full_ps=$(docker compose -f "$DC" ps 2>/dev/null || true)
+  obs_ps=$(docker compose -f "$DC" -f "$DC_OBS" ps 2>/dev/null || true)
+  db_ps=$(docker compose -f "$DC_DEV" ps 2>/dev/null || true)
+  if echo "$full_ps" | grep -q "Up\|running"; then
     echo "$full_ps"
-  elif echo "$db_ps" | grep -q "Up"; then
+  elif echo "$db_ps" | grep -q "Up\|running"; then
     echo "$db_ps"
   else
     echo -e "  ${C_DIM}No containers running${C_RESET}"
@@ -157,77 +116,128 @@ cmd_status() {
 cmd_logs() {
   local target="$1"
   case "$target" in
-    backend)
-      if [[ -f "$LOGS_DIR/backend.log" ]]; then
-        tail -f "$LOGS_DIR/backend.log"
-      else
-        docker compose -f "$REPO_ROOT/docker-compose.yml" logs -f backend
-      fi
-      ;;
-    frontend)
-      if [[ -f "$LOGS_DIR/frontend.log" ]]; then
-        tail -f "$LOGS_DIR/frontend.log"
-      else
-        docker compose -f "$REPO_ROOT/docker-compose.yml" logs -f frontend
-      fi
-      ;;
-    db)
-      docker compose -f "$REPO_ROOT/docker-compose.yml" logs -f db 2>/dev/null || \
-      docker compose -f "$REPO_ROOT/docker-compose.db-dev.yml" logs -f db
-      ;;
-    all)
-      if [[ -f "$LOGS_DIR/backend.log" ]] || [[ -f "$LOGS_DIR/frontend.log" ]]; then
-        tail -f "$LOGS_DIR/backend.log" "$LOGS_DIR/frontend.log" 2>/dev/null || true
-      else
-        docker compose -f "$REPO_ROOT/docker-compose.yml" logs -f backend frontend
-      fi
-      ;;
+    backend)  docker compose -f "$DC" logs -f backend ;;
+    frontend) docker compose -f "$DC" logs -f frontend ;;
+    db)       docker compose -f "$DC" logs -f db ;;
+    all)      docker compose -f "$DC" logs -f ;;
   esac
 }
 
 cmd_rebuild() {
-  local mode="$1"
-  cmd_stop "$mode"
+  cmd_stop
   info "Installing dependencies..."
   (cd "$REPO_ROOT/backend/nodejs" && npm install)
   (cd "$REPO_ROOT/front/react" && npm install)
-  cmd_start "$mode"
+  cmd_start
 }
 
 cmd_reset_db() {
-  local mode="$1"
   check_prereqs
   echo -en "${C_YELLOW}⚠${C_RESET} Drop all DB data and restart? [y/N]: "
   read -r confirm
   [[ "$confirm" =~ ^[Yy]$ ]] || { info "Aborted."; return 0; }
+  docker compose -f "$DC" down -v db 2>/dev/null || \
+    docker compose -f "$DC" rm -fsv db
+  docker compose -f "$DC" up -d db
+  wait_db "$DC"
+  docker compose -f "$DC" exec backend node dist/migrate.js
+}
 
-  if [[ "$mode" == "native" ]]; then
-    docker compose -f "$REPO_ROOT/docker-compose.db-dev.yml" down -v
-    cmd_start native
-  else
-    docker compose -f "$REPO_ROOT/docker-compose.yml" down -v db 2>/dev/null || \
-      docker compose -f "$REPO_ROOT/docker-compose.yml" rm -fsv db
-    docker compose -f "$REPO_ROOT/docker-compose.yml" up -d db
-    wait_db docker
-    docker compose -f "$REPO_ROOT/docker-compose.yml" exec backend node dist/migrate.js
+# ── observability ─────────────────────────────────────────────────────────────
+_obs_password() {
+  # Load from repo-root .env if present and var not already set
+  if [[ -z "${GF_ADMIN_PASSWORD:-}" && -f "$REPO_ROOT/.env" ]]; then
+    local val
+    val=$(grep -E "^GF_ADMIN_PASSWORD=" "$REPO_ROOT/.env" | cut -d= -f2- | tr -d "'\"" || true)
+    [[ -n "$val" ]] && export GF_ADMIN_PASSWORD="$val"
   fi
+  if [[ -z "${GF_ADMIN_PASSWORD:-}" ]]; then
+    echo -en "${C_CYAN}▸${C_RESET} Grafana admin password: "
+    read -rs GF_ADMIN_PASSWORD
+    echo
+    export GF_ADMIN_PASSWORD
+  fi
+}
+
+cmd_monitoring_start() {
+  check_prereqs
+  _obs_password
+  info "Starting app + observability stack..."
+  GF_ADMIN_PASSWORD="$GF_ADMIN_PASSWORD" \
+    docker compose -f "$DC" -f "$DC_OBS" up -d --build
+  wait_db "$DC"
+
+  info "Running migrations..."
+  docker compose -f "$DC" -f "$DC_OBS" exec backend node dist/migrate.js
+
+  info "Seeding..."
+  docker compose -f "$DC" -f "$DC_OBS" exec -T db \
+    mysql -utemplate_user -ptemplate_pass template_db \
+    < "$REPO_ROOT/db/mysql/seed/seed.sql" 2>/dev/null || true
+
+  success "Started — Frontend: http://localhost  API: http://localhost:3000"
+  success "Grafana: http://localhost:3001  Prometheus: http://localhost:9090"
+}
+
+cmd_monitoring_stop() {
+  check_prereqs
+  docker compose -f "$DC" -f "$DC_OBS" down
+  success "App + observability stopped"
+}
+
+# ── native (CLI only) ─────────────────────────────────────────────────────────
+cmd_native_start() {
+  check_prereqs
+  mkdir -p "$PIDS_DIR" "$LOGS_DIR"
+  info "Starting DB only in Docker..."
+  docker compose -f "$DC_DEV" up -d
+  wait_db "$DC_DEV"
+
+  info "Running migrations..."
+  (cd "$REPO_ROOT/backend/nodejs" && npm run db:migrate)
+
+  info "Seeding..."
+  mysql -utemplate_user -ptemplate_pass -h 127.0.0.1 template_db \
+    < "$REPO_ROOT/db/mysql/seed/seed.sql" 2>/dev/null || true
+
+  info "Starting backend (logs → logs/backend.log)..."
+  (cd "$REPO_ROOT/backend/nodejs" && npm run dev > "$LOGS_DIR/backend.log" 2>&1 &)
+  echo $! > "$BACKEND_PID"
+
+  info "Starting frontend (logs → logs/frontend.log)..."
+  (cd "$REPO_ROOT/front/react" && npm run dev > "$LOGS_DIR/frontend.log" 2>&1 &)
+  echo $! > "$FRONTEND_PID"
+
+  success "Native started — Backend: http://localhost:3000  Frontend: http://localhost:5173"
+}
+
+cmd_native_stop() {
+  for pid_file in "$BACKEND_PID" "$FRONTEND_PID"; do
+    if [[ -f "$pid_file" ]]; then
+      local pid
+      pid=$(cat "$pid_file")
+      kill "$pid" 2>/dev/null || true
+      rm -f "$pid_file"
+    fi
+  done
+  docker compose -f "$DC_DEV" down
+  success "Native stopped"
 }
 
 # ── menu ──────────────────────────────────────────────────────────────────────
 show_menu() {
   echo -e "\n${C_BOLD}${C_CYAN}  Template Manager${C_RESET}\n"
-  echo -e "  ${C_CYAN} 1)${C_RESET} Start   — docker  ${C_DIM}(all services in containers, :80 / :3000)${C_RESET}"
-  echo -e "  ${C_CYAN} 2)${C_RESET} Start   — native  ${C_DIM}(DB in Docker, BE+FE local, :5173 / :3000)${C_RESET}"
-  echo -e "  ${C_CYAN} 3)${C_RESET} Stop    — docker"
-  echo -e "  ${C_CYAN} 4)${C_RESET} Stop    — native"
-  echo -e "  ${C_CYAN} 5)${C_RESET} Status"
-  echo -e "  ${C_CYAN} 6)${C_RESET} Logs    — backend"
-  echo -e "  ${C_CYAN} 7)${C_RESET} Logs    — frontend"
-  echo -e "  ${C_CYAN} 8)${C_RESET} Logs    — db"
-  echo -e "  ${C_CYAN} 9)${C_RESET} Rebuild — docker  ${C_DIM}(reinstall deps + rebuild images)${C_RESET}"
-  echo -e "  ${C_CYAN}10)${C_RESET} Rebuild — native"
-  echo -e "  ${C_CYAN}11)${C_RESET} Reset DB — docker ${C_DIM}(drop volume, re-migrate, re-seed)${C_RESET}"
-  echo -e "  ${C_CYAN}12)${C_RESET} Reset DB — native"
+  echo -e "  ${C_CYAN} 1)${C_RESET} Start          ${C_DIM}(all services in containers, :80 / :3000)${C_RESET}"
+  echo -e "  ${C_CYAN} 2)${C_RESET} Stop"
+  echo -e "  ${C_CYAN} 3)${C_RESET} Status"
+  echo -e "  ${C_CYAN} 4)${C_RESET} Logs — backend"
+  echo -e "  ${C_CYAN} 5)${C_RESET} Logs — frontend"
+  echo -e "  ${C_CYAN} 6)${C_RESET} Logs — db"
+  echo -e "  ${C_CYAN} 7)${C_RESET} Rebuild        ${C_DIM}(reinstall deps + rebuild images)${C_RESET}"
+  echo -e "  ${C_CYAN} 8)${C_RESET} Reset DB       ${C_DIM}(drop volume, re-migrate, re-seed)${C_RESET}"
+  echo -e "  ${C_DIM}───────────────────────────────────────────${C_RESET}"
+  echo -e "  ${C_CYAN} 9)${C_RESET} Monitoring — start ${C_DIM}(app + Grafana / Prometheus / Tempo / Loki)${C_RESET}"
+  echo -e "  ${C_CYAN}10)${C_RESET} Monitoring — stop"
   echo -e "  ${C_CYAN} 0)${C_RESET} Exit\n"
   echo -en "Choice: "
 }
@@ -237,18 +247,16 @@ run_menu() {
     show_menu
     read -r choice
     case "$choice" in
-      1)  cmd_start   docker  ;;
-      2)  cmd_start   native  ;;
-      3)  cmd_stop    docker  ;;
-      4)  cmd_stop    native  ;;
-      5)  cmd_status          ;;
-      6)  cmd_logs    backend ;;
-      7)  cmd_logs    frontend;;
-      8)  cmd_logs    db      ;;
-      9)  cmd_rebuild docker  ;;
-      10) cmd_rebuild native  ;;
-      11) cmd_reset_db docker ;;
-      12) cmd_reset_db native ;;
+      1)  cmd_start           ;;
+      2)  cmd_stop            ;;
+      3)  cmd_status          ;;
+      4)  cmd_logs backend    ;;
+      5)  cmd_logs frontend   ;;
+      6)  cmd_logs db         ;;
+      7)  cmd_rebuild         ;;
+      8)  cmd_reset_db        ;;
+      9)  cmd_monitoring_start ;;
+      10) cmd_monitoring_stop  ;;
       0)  echo -e "\n${C_DIM}Bye.${C_RESET}\n"; exit 0 ;;
       *)  warn "Invalid choice" ;;
     esac
@@ -262,23 +270,27 @@ else
   COMMAND="$1"
   shift || true
   case "$COMMAND" in
-    start)    cmd_start    "${1:-docker}" ;;
-    stop)     cmd_stop     "${1:-docker}" ;;
-    status)   cmd_status ;;
-    logs)     cmd_logs     "${1:-all}" ;;
-    rebuild)  cmd_rebuild  "${1:-docker}" ;;
-    reset-db) cmd_reset_db "${1:-docker}" ;;
+    start)      cmd_start ;;
+    stop)       cmd_stop ;;
+    status)     cmd_status ;;
+    logs)       cmd_logs "${1:-all}" ;;
+    rebuild)    cmd_rebuild ;;
+    reset-db)   cmd_reset_db ;;
+    monitoring) cmd_monitoring_"${1:-start}" ;;
+    native)     cmd_native_"${1:-start}" ;;
     help|--help|-h)
       cat <<'EOF'
-Usage: ./manage.sh [command] [mode]
+Usage: ./manage.sh [command] [subcommand]
 
-  (no args)                    Interactive menu
-  start   [docker|native]      Start services
-  stop    [docker|native]      Stop services
-  status                       Show running services and processes
-  logs    [backend|frontend|db|all]
-  rebuild [docker|native]      Stop, reinstall deps, start
-  reset-db [docker|native]     Drop DB volume and restart
+  (no args)              Interactive menu (Docker mode only)
+  start                  Start Docker stack
+  stop                   Stop Docker stack
+  status                 Show running services
+  logs [backend|frontend|db|all]
+  rebuild                Stop, reinstall deps, rebuild images, start
+  reset-db               Drop DB volume and restart
+  monitoring [start|stop]  App + full observability stack
+  native [start|stop]    Native mode (DB in Docker, BE+FE local)
 EOF
       ;;
     *) error "Unknown command: $COMMAND. Run ./manage.sh help"; exit 1 ;;

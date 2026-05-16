@@ -30,6 +30,9 @@ services:
       NODE_ENV: production
       CORS_ORIGIN: "*"
       MIGRATIONS_DIR: /app/migrations
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otelcol:4318/v1/traces
+      OTEL_SERVICE_NAME: backend-nodejs
+      # METRICS_TOKEN: ${METRICS_TOKEN}
     ports:
       - "3000:3000"
     volumes:

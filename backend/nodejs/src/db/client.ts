@@ -8,3 +8,4 @@ export const db = drizzle(pool, { schema, mode: 'default' })
 export type Db = typeof db
 
 export const closePool = () => pool.end()
+export { pool }
