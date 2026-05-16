@@ -56,7 +56,17 @@ GF_ADMIN_PASSWORD=changeme \
   docker compose -f docker-compose.yml -f docker-compose.observability.yml up --build
 ```
 
+Or via the interactive menu: option **9) Monitoring — start**.
+
 > Must run merged — observability services share the default network with the backend.
+
+### Verify
+
+```bash
+GF_ADMIN_PASSWORD=changeme ./scripts/smoke-test-observability.sh
+```
+
+Runs ~22 checks across all signals: backend health, metrics, otelcol, Prometheus, Loki, Tempo, Grafana datasources, dashboard, and a collector-down resilience test.
 
 ### Endpoints
 
@@ -104,3 +114,4 @@ In native mode, logs stream directly to your terminal. In Docker mode, these pul
 - Native dev requires `VITE_API_BASE_URL=http://localhost:3000/api/v1` in `front/react/.env`.
 - Docker builds use `network: host` — required on WSL2.
 - Observability stack is optional — app runs normally without it (OTEL SDK buffers spans, exits cleanly if collector unreachable).
+- Loki and Tempo show HTTP 503 on `/ready` in single-node mode — expected, does not affect functionality.
