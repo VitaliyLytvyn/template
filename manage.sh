@@ -25,6 +25,43 @@ success() { echo -e "${C_GREEN}✔${C_RESET} $*"; }
 warn()    { echo -e "${C_YELLOW}⚠${C_RESET} $*"; }
 error()   { echo -e "${C_RED}✘${C_RESET} $*" >&2; }
 
+# ── public IP (OCI metadata → fallback public IP service → localhost) ─────────
+get_host() {
+  local ip
+  ip=$(curl -sf --max-time 2 http://169.254.169.254/opc/v1/vnics/ 2>/dev/null \
+    | grep -o '"publicIp":"[^"]*"' | head -1 | cut -d'"' -f4)
+  [[ -n "$ip" ]] && { echo "$ip"; return; }
+  ip=$(curl -sf --max-time 3 https://checkip.amazonaws.com 2>/dev/null | tr -d '[:space:]')
+  [[ -n "$ip" ]] && { echo "$ip"; return; }
+  echo "localhost"
+}
+
+# ── URL summary ────────────────────────────────────────────────────────────────
+# mode: docker | monitoring | native
+print_urls() {
+  local mode="${1:-docker}"
+  local h
+  h=$(get_host)
+  echo -e "\n${C_BOLD}  URLs${C_RESET}"
+  case "$mode" in
+    docker)
+      echo -e "  ${C_CYAN}Frontend${C_RESET}    http://${h}"
+      echo -e "  ${C_CYAN}API${C_RESET}         http://${h}:3000"
+      ;;
+    monitoring)
+      echo -e "  ${C_CYAN}Frontend${C_RESET}    http://${h}"
+      echo -e "  ${C_CYAN}API${C_RESET}         http://${h}:3000"
+      echo -e "  ${C_CYAN}Grafana${C_RESET}     http://${h}:3001"
+      echo -e "  ${C_CYAN}Prometheus${C_RESET}  http://${h}:9090"
+      ;;
+    native)
+      echo -e "  ${C_CYAN}Frontend${C_RESET}    http://${h}:5173"
+      echo -e "  ${C_CYAN}Backend${C_RESET}     http://${h}:3000"
+      ;;
+  esac
+  echo
+}
+
 # ── prerequisite check ────────────────────────────────────────────────────────
 check_prereqs() {
   local missing=()
@@ -72,7 +109,8 @@ cmd_start() {
     mysql -utemplate_user -ptemplate_pass template_db \
     < "$REPO_ROOT/db/mysql/seed/seed.sql" 2>/dev/null || true
 
-  success "Docker started — Frontend: http://localhost  Backend: http://localhost:3000"
+  success "Docker started"
+  print_urls docker
 }
 
 cmd_stop() {
@@ -110,7 +148,22 @@ cmd_status() {
       echo -e "  ${C_DIM}●${C_RESET} $label not running"
     fi
   done
-  echo
+
+  # Detect active mode and print URLs
+  local obs_running=false docker_running=false native_running=false
+  docker compose -f "$DC" -f "$DC_OBS" ps 2>/dev/null | grep -q "Up\|running" && obs_running=true
+  docker compose -f "$DC" ps 2>/dev/null | grep -q "Up\|running" && docker_running=true
+  [[ -f "$BACKEND_PID" ]] && kill -0 "$(cat "$BACKEND_PID")" 2>/dev/null && native_running=true
+
+  if $obs_running; then
+    print_urls monitoring
+  elif $docker_running; then
+    print_urls docker
+  elif $native_running; then
+    print_urls native
+  else
+    echo
+  fi
 }
 
 cmd_logs() {
@@ -175,8 +228,8 @@ cmd_monitoring_start() {
     mysql -utemplate_user -ptemplate_pass template_db \
     < "$REPO_ROOT/db/mysql/seed/seed.sql" 2>/dev/null || true
 
-  success "Started — Frontend: http://localhost  API: http://localhost:3000"
-  success "Grafana: http://localhost:3001  Prometheus: http://localhost:9090"
+  success "Started"
+  print_urls monitoring
 }
 
 cmd_monitoring_stop() {
@@ -208,7 +261,8 @@ cmd_native_start() {
   (cd "$REPO_ROOT/front/react" && npm run dev > "$LOGS_DIR/frontend.log" 2>&1 &)
   echo $! > "$FRONTEND_PID"
 
-  success "Native started — Backend: http://localhost:3000  Frontend: http://localhost:5173"
+  success "Native started"
+  print_urls native
 }
 
 cmd_native_stop() {
