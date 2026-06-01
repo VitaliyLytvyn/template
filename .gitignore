@@ -9,4 +9,5 @@ logs/*.log
 
 # Not ignore
 !CLAUDE.md
-!.MY-FILES
+!.MY-FILES/
+!.claude/

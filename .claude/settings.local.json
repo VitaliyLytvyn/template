@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(npx tsc *)",
+      "mcp__plugin_context-mode_context-mode__ctx_doctor",
+      "mcp__plugin_context-mode_context-mode__ctx_search",
+      "Bash(rtk ls *)",
+      "mcp__plugin_context-mode_context-mode__ctx_batch_execute",
+      "mcp__plugin_context-mode_context-mode__ctx_execute_file",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(rtk read *)",
+      "Bash(node *)",
+      "Bash(python3 *)",
+      "Bash(rtk grep *)",
+      "Bash(sed -i 's|import { Resource } from '\\\\''@opentelemetry/resources'\\\\''|import { resourceFromAttributes } from '\\\\''@opentelemetry/resources'\\\\''|' instrumentation.ts)",
+      "Bash(sed -i 's|import { SEMRESATTRS_SERVICE_NAME } from '\\\\''@opentelemetry/semantic-conventions'\\\\''|import { ATTR_SERVICE_NAME } from '\\\\''@opentelemetry/semantic-conventions'\\\\''|' instrumentation.ts)",
+      "Bash(sed -i 's|  resource: new Resource\\({|  resource: resourceFromAttributes\\({|' instrumentation.ts)",
+      "Bash(sed -i 's|\\\\[SEMRESATTRS_SERVICE_NAME\\\\]|\\\\[ATTR_SERVICE_NAME\\\\]|' instrumentation.ts)",
+      "Bash(chmod +x /home/aleks/template/scripts/smoke-test-observability.sh)",
+      "Bash(sed -i 's|import { resourceFromAttributes } from '\\\\''@opentelemetry/resources'\\\\''|import { Resource } from '\\\\''@opentelemetry/resources'\\\\''|' /home/aleks/template/backend/nodejs/src/instrumentation.ts)",
+      "Bash(sed -i 's|import { ATTR_SERVICE_NAME } from '\\\\''@opentelemetry/semantic-conventions'\\\\''|import { SEMRESATTRS_SERVICE_NAME } from '\\\\''@opentelemetry/semantic-conventions'\\\\''|' /home/aleks/template/backend/nodejs/src/instrumentation.ts)",
+      "Bash(sed -i 's|  resource: resourceFromAttributes\\({|  resource: new Resource\\({|' /home/aleks/template/backend/nodejs/src/instrumentation.ts)",
+      "Bash(sed -i 's|\\\\[ATTR_SERVICE_NAME\\\\]|\\\\[SEMRESATTRS_SERVICE_NAME\\\\]|' /home/aleks/template/backend/nodejs/src/instrumentation.ts)"
+    ]
+  },
+  "enabledPlugins": {
+    "context7@claude-plugins-official": true
+  }
+}
