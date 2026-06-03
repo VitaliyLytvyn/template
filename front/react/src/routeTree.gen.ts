@@ -12,7 +12,7 @@ import { Route as rootRoute } from './routes/__root'
 import { Route as ProductsIndexImport } from './routes/products/index'
 import { Route as ProductsCreateImport } from './routes/products/create'
 import { Route as ProductsIdImport } from './routes/products/$id'
-import { Route as ProductsIdEditImport } from './routes/products/$id.edit'
+import { Route as ProductsIdEditImport } from './routes/products/$id_.edit'
 import { Route as IndexImport } from './routes/index'
 
 // Create/Update Routes
@@ -36,7 +36,7 @@ const ProductsIdRoute = ProductsIdImport.update({
 } as any)
 
 const ProductsIdEditRoute = ProductsIdEditImport.update({
-  id: '/products/$id/edit',
+  id: '/products/$id_/edit',
   path: '/products/$id/edit',
   getParentRoute: () => rootRoute,
 } as any)
@@ -79,8 +79,8 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductsIdImport
       parentRoute: typeof rootRoute
     }
-    '/products/$id/edit': {
-      id: '/products/$id/edit'
+    '/products/$id_/edit': {
+      id: '/products/$id_/edit'
       path: '/products/$id/edit'
       fullPath: '/products/$id/edit'
       preLoaderRoute: typeof ProductsIdEditImport
@@ -113,7 +113,7 @@ export interface FileRoutesById {
   '/products/': typeof ProductsIndexRoute
   '/products/create': typeof ProductsCreateRoute
   '/products/$id': typeof ProductsIdRoute
-  '/products/$id/edit': typeof ProductsIdEditRoute
+  '/products/$id_/edit': typeof ProductsIdEditRoute
 }
 
 export interface FileRouteTypes {
@@ -121,7 +121,7 @@ export interface FileRouteTypes {
   fullPaths: '/' | '/products' | '/products/create' | '/products/$id' | '/products/$id/edit'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/products' | '/products/create' | '/products/$id' | '/products/$id/edit'
-  id: '__root__' | '/' | '/products/' | '/products/create' | '/products/$id' | '/products/$id/edit'
+  id: '__root__' | '/' | '/products/' | '/products/create' | '/products/$id' | '/products/$id_/edit'
   fileRoutesById: FileRoutesById
 }
 

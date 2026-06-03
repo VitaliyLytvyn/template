@@ -29,8 +29,8 @@ function ProductDetail() {
         <div className="flex justify-between items-start mb-4">
           <h1 className="text-2xl font-bold text-slate-900">{p.name}</h1>
           <div className="flex gap-2">
-            <Link to="/products/$id/edit" params={{ id: String(p.id) }}
-                  className="bg-amber-400 text-slate-900 px-3 py-1 rounded text-sm">Edit</Link>
+            <button onClick={() => navigate({ to: '/products/$id/edit', params: { id: String(p.id) } })}
+                    className="bg-amber-400 text-slate-900 px-3 py-1 rounded text-sm">Edit</button>
             <button onClick={() => confirm('Delete?') && deleteMutation.mutate()}
                     className="bg-red-500 text-white px-3 py-1 rounded text-sm">Delete</button>
           </div>
