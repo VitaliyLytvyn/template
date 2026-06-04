@@ -47,16 +47,19 @@ print_urls() {
     docker)
       echo -e "  ${C_CYAN}Frontend${C_RESET}    http://${h}"
       echo -e "  ${C_CYAN}API${C_RESET}         http://${h}:3000"
+      echo -e "  ${C_CYAN}phpMyAdmin${C_RESET}  http://${h}:8080"
       ;;
     monitoring)
       echo -e "  ${C_CYAN}Frontend${C_RESET}    http://${h}"
       echo -e "  ${C_CYAN}API${C_RESET}         http://${h}:3000"
       echo -e "  ${C_CYAN}Grafana${C_RESET}     http://${h}:3001"
       echo -e "  ${C_CYAN}Prometheus${C_RESET}  http://${h}:9090"
+      echo -e "  ${C_CYAN}phpMyAdmin${C_RESET}  http://${h}:8080"
       ;;
     native)
       echo -e "  ${C_CYAN}Frontend${C_RESET}    http://${h}:5173"
       echo -e "  ${C_CYAN}Backend${C_RESET}     http://${h}:3000"
+      echo -e "  ${C_CYAN}phpMyAdmin${C_RESET}  http://${h}:8080"
       ;;
   esac
   echo

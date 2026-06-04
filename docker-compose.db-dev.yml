@@ -17,5 +17,19 @@ services:
       timeout: 5s
       retries: 5
 
+  phpmyadmin:
+    image: phpmyadmin:5.2
+    container_name: template-pma
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: template_user
+      PMA_PASSWORD: template_pass
+    ports:
+      - "8080:80"
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   db_data:
