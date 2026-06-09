@@ -1,0 +1,35 @@
+{
+  "uid": "pyroscope-flamegraph",
+  "title": "Pyroscope CPU Flame Graph (eBPF)",
+  "tags": ["ebpf", "pyroscope", "cpu"],
+  "schemaVersion": 39,
+  "time": { "from": "now-15m", "to": "now" },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "label": "Service",
+        "type": "query",
+        "datasource": { "uid": "ebpf-pyroscope" },
+        "query": "{ }"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "CPU Flame Graph",
+      "type": "flamegraph",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 18 },
+      "targets": [
+        {
+          "datasource": { "uid": "ebpf-pyroscope" },
+          "queryType": "profile",
+          "profileTypeId": "process_cpu:cpu:nanoseconds:cpu:nanoseconds",
+          "labelSelector": "{}"
+        }
+      ]
+    }
+  ]
+}

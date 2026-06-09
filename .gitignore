@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .env
+ebpf/.env
 *.pid
 uploads/
 !uploads/.gitkeep
@@ -11,3 +12,4 @@ logs/*.log
 !CLAUDE.md
 !.MY-FILES/
 !.claude/
+

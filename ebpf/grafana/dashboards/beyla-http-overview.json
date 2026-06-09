@@ -1,0 +1,87 @@
+{
+  "uid": "beyla-http-overview",
+  "title": "Beyla HTTP Overview (eBPF)",
+  "tags": ["ebpf", "beyla"],
+  "schemaVersion": 39,
+  "time": { "from": "now-15m", "to": "now" },
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request Rate (req/s) by route",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "uid": "ebpf-prometheus" },
+          "expr": "sum(rate(http_server_request_duration_seconds_count[1m])) by (http_route)",
+          "legendFormat": "{{http_route}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Error Rate (%) 4xx + 5xx",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "uid": "ebpf-prometheus" },
+          "expr": "100 * sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"4..|5..\"}[1m])) / sum(rate(http_server_request_duration_seconds_count[1m]))",
+          "legendFormat": "error %"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Latency P50/P95/P99",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "uid": "ebpf-prometheus" },
+          "expr": "histogram_quantile(0.50, sum(rate(http_server_request_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": { "uid": "ebpf-prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": { "uid": "ebpf-prometheus" },
+          "expr": "histogram_quantile(0.99, sum(rate(http_server_request_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Latency Heatmap",
+      "type": "heatmap",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "uid": "ebpf-prometheus" },
+          "expr": "sum(rate(http_server_request_duration_seconds_bucket[1m])) by (le)",
+          "legendFormat": "{{le}}",
+          "format": "heatmap"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Top routes by request count",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "uid": "ebpf-prometheus" },
+          "expr": "topk(10, sum(rate(http_server_request_duration_seconds_count[5m])) by (http_route, http_request_method))",
+          "format": "table",
+          "instant": true
+        }
+      ]
+    }
+  ]
+}

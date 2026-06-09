@@ -1,0 +1,17 @@
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: ebpf-prometheus
+    url: http://ebpf-prometheus:9090
+    isDefault: true
+
+  - name: Tempo
+    type: tempo
+    uid: ebpf-tempo
+    url: http://ebpf-tempo:3200
+
+  - name: Pyroscope
+    type: grafana-pyroscope-datasource
+    uid: ebpf-pyroscope
+    url: http://ebpf-pyroscope:4040

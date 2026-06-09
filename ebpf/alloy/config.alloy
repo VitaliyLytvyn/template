@@ -1,0 +1,29 @@
+logging {
+  level = "info"
+}
+
+discovery.process "all" { }
+
+discovery.relabel "backend" {
+  targets = discovery.process.all.targets
+  rule {
+    source_labels = ["__meta_process_exe"]
+    target_label  = "service_name"
+    regex         = ".*/([^/]+)$"
+    replacement   = "$1"
+    action        = "replace"
+  }
+}
+
+pyroscope.write "local" {
+  endpoint {
+    url = "http://localhost:4040"
+  }
+}
+
+// targets_only = false profiles ALL host processes (study intent); flame graphs include non-backend procs.
+pyroscope.ebpf "default" {
+  targets      = discovery.relabel.backend.output
+  forward_to   = [pyroscope.write.local.receiver]
+  targets_only = false
+}

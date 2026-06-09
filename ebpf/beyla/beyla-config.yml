@@ -1,0 +1,11 @@
+discovery:
+  instrument:
+    - open_ports: 3000
+
+prometheus_export:
+  port: 9400
+  path: /metrics
+  features:
+    - application
+    - application_span
+    - application_service_graph

@@ -23,7 +23,10 @@
       "Bash(sed -i 's|import { resourceFromAttributes } from '\\\\''@opentelemetry/resources'\\\\''|import { Resource } from '\\\\''@opentelemetry/resources'\\\\''|' /home/aleks/template/backend/nodejs/src/instrumentation.ts)",
       "Bash(sed -i 's|import { ATTR_SERVICE_NAME } from '\\\\''@opentelemetry/semantic-conventions'\\\\''|import { SEMRESATTRS_SERVICE_NAME } from '\\\\''@opentelemetry/semantic-conventions'\\\\''|' /home/aleks/template/backend/nodejs/src/instrumentation.ts)",
       "Bash(sed -i 's|  resource: resourceFromAttributes\\({|  resource: new Resource\\({|' /home/aleks/template/backend/nodejs/src/instrumentation.ts)",
-      "Bash(sed -i 's|\\\\[ATTR_SERVICE_NAME\\\\]|\\\\[SEMRESATTRS_SERVICE_NAME\\\\]|' /home/aleks/template/backend/nodejs/src/instrumentation.ts)"
+      "Bash(sed -i 's|\\\\[ATTR_SERVICE_NAME\\\\]|\\\\[SEMRESATTRS_SERVICE_NAME\\\\]|' /home/aleks/template/backend/nodejs/src/instrumentation.ts)",
+      "Bash(rtk find *)",
+      "WebSearch",
+      "Bash(docker --version)"
     ]
   },
   "enabledPlugins": {

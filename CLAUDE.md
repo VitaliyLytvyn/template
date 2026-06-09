@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Guidance for Claude Code (claude.ai/code) in this repo.
+guidance to Claude Code when working with code in this repo.
 
 ## What this is
 
@@ -65,8 +65,26 @@ Migrations must exist before Docker or native start — `manage.sh` runs them po
 ### Smoke tests
 ```bash
 GF_ADMIN_PASSWORD=changeme ./scripts/smoke-test-observability.sh
+GF_ADMIN_PASSWORD=changeme ./scripts/smoke-test-ebpf.sh   # requires eBPF stack running
 ```
-Verifies all observability signals end-to-end: backend health, metrics, otelcol, Prometheus, Loki, Tempo, Grafana. Run after the full stack + observability is up.
+
+### eBPF observability stack (`ebpf/`)
+Zero-code instrumentation layer (Beyla + Alloy + Pyroscope + dedicated Grafana/Prometheus/Tempo).
+Runs alongside the main stack — backend must already be on `:3000`.
+
+```bash
+./ebpf-manage.sh          # interactive menu: deploy / destroy / status / logs
+```
+
+Ports (no conflict with main stack): Grafana `:3002`, Prometheus `:9091`, Tempo `:3201`, Pyroscope `:4040`.
+
+**Oracle Cloud / iptables note**: Prometheus scrapes Beyla at `host.docker.internal:9400` (Beyla runs in `network_mode: host`). Oracle's default iptables blocks Docker-bridge → host. Add before deploying:
+```bash
+sudo iptables -I INPUT -s 172.19.0.0/16 -p tcp --dport 9400 -j ACCEPT
+sudo iptables-save | sudo tee /etc/iptables/rules.v4
+```
+
+Beyla requires `SYS_ADMIN` (+ `DAC_READ_SEARCH`, `CHECKPOINT_RESTORE`) for HTTP capture and trace context propagation — already in `ebpf/docker-compose.yml`.
 
 ## Architecture
 
